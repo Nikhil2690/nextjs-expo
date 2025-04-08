@@ -2,38 +2,48 @@ import Head from "next/head";
 import Header from "@/components/Header";
 import { Avatar, Box, Button, Tooltip, Typography } from '@mui/material';
 import { auth, provider } from '../firebaseConfig';
-import { signInWithRedirect } from 'firebase/auth';
+import { signInWithRedirect,signInWithPopup, getRedirectResult, onAuthStateChanged } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 
-
-
 export default function Home() {
-
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true); // <-- Track loading state
 
   useEffect(() => {
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result) {
-          console.log('Redirect login result:', result.user);
-          setUser(result.user);
+    if (typeof window !== 'undefined') {
+      // First, listen to auth state
+      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        if (currentUser) {
+          console.log("onAuthStateChanged user:", currentUser);
+          setUser(currentUser);
         }
-      })
-      .catch((error) => {
-        console.error('Redirect sign-in error:', error);
+        setLoading(false);
       });
-  }, []);
 
+      // Then check for redirect result
+      getRedirectResult(auth)
+        .then((result) => {
+          if (result?.user) {
+            console.log("getRedirectResult user:", result.user);
+            setUser(result.user);
+          }
+        })
+        .catch((error) => {
+          console.error("Redirect sign-in error:", error);
+        });
+
+      return () => unsubscribe();
+    }
+  }, []);
 
   const handleGoogleSignIn = async () => {
     try {
-      signInWithRedirect(auth, provider);
+      await signInWithPopup(auth, provider);
     } catch (error) {
       console.error('Error during sign-in:', error);
       alert('Login failed. Please try again.');
     }
   };
-  
 
   return (
     <>
@@ -44,37 +54,52 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <Header/>
-      
-      <Box sx={{
-        display: 'flex',
-        flexDirection:'column',
-        gap:'10',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-      }}>
-     { user?(
-       <>
-       <Avatar src={user.photoURL} sx={{ width: 80, height: 80, mb: 2 }} />
-       <Typography variant="h6">Welcome, {user.displayName}!</Typography>
-       <Typography variant="body2">{user.email}</Typography>
-       <Button variant="outlined" sx={{ mt: 2 }} onClick={() => {
-         auth.signOut();
-         setUser(null);
-       }}>
-         Logout
-       </Button>
-     </>
-     ):(
-      <Tooltip  title="Click to sign in with Google" arrow>
-      <Button variant="contained" sx={{ backgroundColor: '#00BFFF',transition: 'transform 0.3s ease','&:hover': {transform: 'scale(1.05)',}, }} 
-        onClick={handleGoogleSignIn}>
-        Sign in with Google
-      </Button>
-      </Tooltip>
-      )}
-    </Box>
+      <Header />
+
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+        }}
+      >
+        {loading ? (
+          <Typography>Loading...</Typography>
+        ) : user ? (
+          <>
+            <Avatar src={user.photoURL} sx={{ width: 80, height: 80, mb: 2 }} />
+            <Typography variant="h6">Welcome, {user.displayName}!</Typography>
+            <Typography variant="body2">{user.email}</Typography>
+            <Button
+              variant="outlined"
+              sx={{ mt: 2 }}
+              onClick={() => {
+                auth.signOut();
+                setUser(null);
+              }}
+            >
+              Logout
+            </Button>
+          </>
+        ) : (
+          <Tooltip title="Click to sign in with Google" arrow>
+            <Button
+              variant="contained"
+              sx={{
+                backgroundColor: '#00BFFF',
+                transition: 'transform 0.3s ease',
+                '&:hover': { transform: 'scale(1.05)' },
+              }}
+              onClick={handleGoogleSignIn}
+            >
+              Sign in with Google
+            </Button>
+          </Tooltip>
+        )}
+      </Box>
     </>
   );
 }
