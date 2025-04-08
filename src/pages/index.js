@@ -2,8 +2,8 @@ import Head from "next/head";
 import Header from "@/components/Header";
 import { Avatar, Box, Button, Tooltip, Typography } from '@mui/material';
 import { auth, provider } from '../firebaseConfig';
-import { signInWithPopup } from 'firebase/auth';
-import { useState } from 'react';
+import { signInWithRedirect } from 'firebase/auth';
+import { useEffect, useState } from 'react';
 
 
 
@@ -11,20 +11,29 @@ export default function Home() {
 
   const [user, setUser] = useState(null);
 
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          console.log('Redirect login result:', result.user);
+          setUser(result.user);
+        }
+      })
+      .catch((error) => {
+        console.error('Redirect sign-in error:', error);
+      });
+  }, []);
+
 
   const handleGoogleSignIn = async () => {
     try {
-      const result = await signInWithPopup(auth, provider);
-      setUser(result.user);
+      signInWithRedirect(auth, provider);
     } catch (error) {
-      if (error.code === 'auth/popup-closed-by-user') {
-        alert('Popup was closed before completing sign-in.');
-      } else {
-        console.error('Error during sign-in:', error);
-        alert('Login failed. Please try again.');
-      }
+      console.error('Error during sign-in:', error);
+      alert('Login failed. Please try again.');
     }
   };
+  
 
   return (
     <>
