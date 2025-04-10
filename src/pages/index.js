@@ -45,6 +45,24 @@ export default function Home() {
     }
   };
 
+  const sendPushNotification = async () => {
+    const response = await fetch('/api/sendNotification', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        token: 'YOUR_DEVICE_FCM_TOKEN', // Replace this with your Expo app FCM token
+        title: 'Test Notification',
+        body: 'Hello from Next.js!',
+      }),
+    });
+  
+    const data = await response.json();
+    console.log('Notification Response:', data);
+  };
+  
+
   return (
     <>
       <Head>
@@ -100,6 +118,11 @@ export default function Home() {
           </Tooltip>
         )}
       </Box>
+
+
+      <Button variant="contained" color="success" onClick={sendPushNotification}>
+        Send Test Notification
+      </Button>
     </>
   );
 }
